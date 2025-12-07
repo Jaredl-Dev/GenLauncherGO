@@ -22,12 +22,13 @@ namespace GenLauncherNet
         public const string GenLauncherModsFolder = "GLM";
         public const string GenLauncherModsFolderOld = "GenLauncherModifications";
         public const string LauncherImageSubFolder = "LauncherImages";
-        public const string Version = "1.0.1.0";
+        public const string Version = "1.0.1.1";
         public const int LaunchesCountForUpdateAdverising = 100;
         public const string SteamFolderName = "ZH_Generals";
+        public const string OriginalGameAlias = "Original Game";
 
         public const string ZHRepos =
-            @"https://raw.githubusercontent.com/p0ls3r/GenLauncherModsData/master/ReposModificationDataZH3.yaml";
+            @"https://raw.githubusercontent.com/p0ls3r/GenLauncherModsData/master/ReposModificationDataZH4.yaml";
 
         public const string GenRepos =
            @"https://raw.githubusercontent.com/p0ls3r/GenLauncherModsData/master/ReposModificationDataGenerals3.yaml";
@@ -38,6 +39,7 @@ namespace GenLauncherNet
 
         public const string AddonsFolderName = "Addons";
         public const string PatchesFolderName = "Patches";
+        public const string ExecutablesFolderName = "Executables";
         public const string WorldBuilderExeName = "WorldBuilderNT27.exe";
         public const string VulkanDllsFolderName = "Vulkan";
 

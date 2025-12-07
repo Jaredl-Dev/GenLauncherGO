@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -37,12 +38,65 @@ namespace GenLauncherNet
             }
         }
 
-        public static void CreateMirrorsFromFolder(string path, bool createLinksOnEmptyBigs, bool exceptExeAndDllsFiles = true)
+        public static void RemoveSymbLinkFolder(DirectoryInfo folder)
         {
-            CreateMirrorsFromFolder(path, string.Empty, createLinksOnEmptyBigs, exceptExeAndDllsFiles);
+            try
+            {
+                if (folder.IsSymbolicLink() && !folder.FullName.Contains("SymbolicLinkSupport.dll"))
+                {
+                    Directory.Delete(folder.FullName, false);
+                }
+            }
+            catch
+            {
+                //TODO logger
+            }
         }
 
-        public static void CreateMirrorsFromFolder(string sourceFolder, string targetFolder, bool createLinksOnEmptyBigs, bool exceptExeAndDllsFiles = true)
+        public static void CreateMirrorsForExe(string sourceFolder, string targetFolder)
+        {
+            var sourceDirectoryInfo = new DirectoryInfo(sourceFolder);
+
+            foreach (var file in sourceDirectoryInfo.GetFiles())
+            {
+                var sourceFile = file.FullName;
+                var targetFile = String.Empty;
+                if (String.IsNullOrEmpty(targetFolder))
+                    targetFile = file.Name;
+                else
+                    targetFile = targetFolder + "\\" + file.Name;
+
+                if (sourceFile.Contains(EntryPoint.GenLauncherOriginalFileSuffix))
+                    continue;
+
+                try
+                {
+                    CreateMirrorForExe(sourceFile, targetFile);
+                }
+                catch (Exception e)
+                {
+                    throw new Exception("Cannot replace file " + targetFile + " ErrorMsg: " + e.Message);
+                }
+            }
+
+            foreach (var folder in sourceDirectoryInfo.GetDirectories())
+            {
+                if (String.Equals(folder.Name, EntryPoint.GenLauncherModsFolder) || String.Equals(folder.Name, EntryPoint.LauncherFolder.Trim('/')))
+                {
+                    continue;
+                }
+
+                CreateSymbolicLink(sourceDirectoryInfo.FullName + "\\" + targetFolder + "\\" + folder.Name, folder.FullName, SymbolicLink.Directory);
+            }
+        }
+
+
+        public static void CreateMirrorsFromFolder(string path, bool createLinksOnEmptyBigs, bool linksForMod = true)
+        {
+            CreateMirrorsFromFolder(path, string.Empty, createLinksOnEmptyBigs, linksForMod);
+        }
+
+        public static void CreateMirrorsFromFolder(string sourceFolder, string targetFolder, bool createLinksOnEmptyBigs, bool linksForMod = true)
         {
             if (!string.IsNullOrEmpty(targetFolder) && !Directory.Exists(targetFolder))
             {
@@ -53,7 +107,7 @@ namespace GenLauncherNet
 
             var exceptExtensions = new HashSet<string>();
 
-            if (exceptExeAndDllsFiles)
+            if (linksForMod)
             {
                 exceptExtensions = GameLauncher.exceptExtensions;
             }    
@@ -149,6 +203,16 @@ namespace GenLauncherNet
                 {
                     throw new Exception("Cannot replace file " + targetFile + " ErrorMsg: " + e.Message);
                 }
+            }
+
+            CreateSymbolicLink(targetFile, sourceFile, SymbolicLink.File);
+        }
+
+        public static void CreateMirrorForExe(string sourceFile, string targetFile)
+        {
+            if (File.Exists(targetFile))
+            {
+                return;
             }
 
             CreateSymbolicLink(targetFile, sourceFile, SymbolicLink.File);

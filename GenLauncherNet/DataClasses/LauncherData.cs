@@ -28,6 +28,7 @@ namespace GenLauncherNet
         public List<GameModification> Modifications = new List<GameModification>();
         public List<GameModification> Addons = new List<GameModification>();
         public List<GameModification> Patches = new List<GameModification>();
+        public List<GameModification> Exes = new List<GameModification>();
 
         internal void AddOrUpdate(ModificationVersion modificationVersion)
         {
@@ -47,6 +48,9 @@ namespace GenLauncherNet
                     break;
                 case ModificationType.Patch:
                     AddOrUpdateModificationVersion(Patches, modificationVersion);
+                    break;
+                case ModificationType.Executable:
+                    AddOrUpdateModificationVersion(Exes, modificationVersion);
                     break;
             }
         }
@@ -70,6 +74,9 @@ namespace GenLauncherNet
                     break;
                 case ModificationType.Advertising:
                     DeleteModification(Modifications, modificationVersion);
+                    break;
+                case ModificationType.Executable:
+                    DeleteModification(Exes, modificationVersion);
                     break;
             }
         }

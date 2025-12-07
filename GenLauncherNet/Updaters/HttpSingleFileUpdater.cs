@@ -191,13 +191,22 @@ namespace GenLauncherNet
 
             _response.EnsureSuccessStatusCode();
 
-            if (_response.Content.Headers.ContentDisposition == null)
+            if (_response.Content.Headers.ContentDisposition == null && 
+                _response.Content.Headers.ContentType != null &&
+                _response.Content.Headers.ContentType.MediaType != "application/zip" &&
+                _response.Content.Headers.ContentType.MediaType != "application/octet-stream")
                 throw new Exception("Download link is incorrect, please contact modification creator and try again later.");
 
-            if (_response.Content.Headers.ContentDisposition.FileName != null)
-                _fileName = _response.Content.Headers.ContentDisposition.FileName.Replace("\"", String.Empty).Replace("\\", String.Empty);
-            else
-                _fileName = _response.Content.Headers.ContentDisposition.FileNameStar;
+            if (_response.Content.Headers.ContentDisposition != null)
+            {
+                if (_response.Content.Headers.ContentDisposition.FileName != null)
+                    _fileName = _response.Content.Headers.ContentDisposition.FileName.Replace("\"", String.Empty).Replace("\\", String.Empty);
+                else
+                    _fileName = _response.Content.Headers.ContentDisposition.FileNameStar;
+            } else
+            {
+                _fileName = _response.RequestMessage.RequestUri.Segments[_response.RequestMessage.RequestUri.Segments.Length - 1];
+            }
 
             _totalDownloadSize = _response.Content.Headers.ContentLength;
         }

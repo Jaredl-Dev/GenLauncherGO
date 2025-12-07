@@ -382,7 +382,7 @@
     <value>需要更高版本的.NET Framework {0}</value>
   </data>
   <data name="NewUpdateForGenLauncher" xml:space="preserve">
-    <value>启动器有新版本可以下载！</value>
+    <value>启动器有新版本可以下载 {0}！</value>
   </data>
   <data name="No" xml:space="preserve">
     <value>不了</value>

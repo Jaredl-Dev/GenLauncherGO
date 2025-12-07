@@ -32,6 +32,17 @@ namespace GenLauncherNet
 
         public ColorsInfoString ColorsInformation { get; set; }
 
+        public List<string> ExceptionNames { get; set; }
+
+        public string[] AdditionalFileNames { get; set; }
+
+        public string ExecutableFileName { get; set; }
+
+        public bool ReplacesOriginalGameFile { get; set; }
+
+        public bool ReplacesOriginalWBFile { get; set; }
+
+
         public ModificationReposVersion()
         {
 
@@ -75,6 +86,7 @@ namespace GenLauncherNet
         Mod,
         Addon,
         Patch,
-        Advertising
+        Advertising,
+        Executable
     }
 }

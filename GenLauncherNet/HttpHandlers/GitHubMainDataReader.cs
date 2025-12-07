@@ -31,9 +31,9 @@ namespace GenLauncherNet
             return _data.modDatas.Select(t => t.ModName).ToList();
         }
 
-        public async Task<Dictionary<ModificationReposVersion, ModAddonsAndPatches>> UpdateDownloadedModsDataFromRepos(List<string> downloadedMods)
+        public async Task<Dictionary<ModificationReposVersion, ModAddonsAndPatchesRawData>> UpdateDownloadedModsDataFromRepos(List<string> downloadedMods)
         {
-            var mods = new Dictionary<ModificationReposVersion, ModAddonsAndPatches>();
+            var mods = new Dictionary<ModificationReposVersion, ModAddonsAndPatchesRawData>();
 
             foreach (var modData in _data.modDatas)
             {
@@ -55,6 +55,53 @@ namespace GenLauncherNet
             return mods;
         }
 
+        public async Task<Dictionary<ModificationReposVersion, ExecutablesRawData>> DownloadedIndependedExecutables()
+        {
+            var executables = new Dictionary<ModificationReposVersion, ExecutablesRawData>();
+
+            foreach (var modData in _data.executables)
+            {
+                if (!string.IsNullOrEmpty(modData.DependencyName))
+                    continue;
+
+                try
+                {
+                    var kvp = await DownloadExeData(modData);
+                    executables.Add(kvp.Key, kvp.Value);
+                }
+                catch
+                {
+                    //TODO logger
+                    continue;
+                }
+            }
+
+            return executables;
+        }
+
+        public async Task<Dictionary<ModificationReposVersion, ExecutablesRawData>> DownloadedDependedExecutables(string dependencyName)
+        {
+            var executables = new Dictionary<ModificationReposVersion, ExecutablesRawData>();
+
+            var rawExecutables = _data.executables.Where(t => String.Equals(t.DependencyName, dependencyName, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            foreach (var modData in rawExecutables)
+            {
+                try
+                {
+                    var kvp = await DownloadExeData(modData);
+                    executables.Add(kvp.Key, kvp.Value);
+                }
+                catch
+                {
+                    //TODO logger
+                    continue;
+                }
+            }
+
+            return executables;
+        }
+
         public async Task<ModificationReposVersion> DownloadAdvertisingInfo(string advLink)
         {
             try
@@ -70,17 +117,27 @@ namespace GenLauncherNet
             return null;
         }
 
-        public async Task<KeyValuePair<ModificationReposVersion, ModAddonsAndPatches>> DownloadModData(ModAddonsAndPatches modData)
+        public async Task<KeyValuePair<ModificationReposVersion, ExecutablesRawData>> DownloadExeData(ExecutablesRawData modData)
         {
             ModificationReposVersion modification = null;
 
             using (var response = await _httpClient.GetAsync(modData.ModLink, HttpCompletionOption.ResponseHeadersRead))
                 modification = await DownloadDataFromHttpResponseMessage(response);
 
-            return new KeyValuePair<ModificationReposVersion, ModAddonsAndPatches>(modification, modData);
+            return new KeyValuePair<ModificationReposVersion, ExecutablesRawData>(modification, modData);
         }
 
-        public async Task<KeyValuePair<ModificationReposVersion, ModAddonsAndPatches>> DownloadModDataByName(string Name)
+        public async Task<KeyValuePair<ModificationReposVersion, ModAddonsAndPatchesRawData>> DownloadModData(ModAddonsAndPatchesRawData modData)
+        {
+            ModificationReposVersion modification = null;
+
+            using (var response = await _httpClient.GetAsync(modData.ModLink, HttpCompletionOption.ResponseHeadersRead))
+                modification = await DownloadDataFromHttpResponseMessage(response);
+
+            return new KeyValuePair<ModificationReposVersion, ModAddonsAndPatchesRawData>(modification, modData);
+        }
+
+        public async Task<KeyValuePair<ModificationReposVersion, ModAddonsAndPatchesRawData>> DownloadModDataByName(string Name)
         {
             var modData = _data.modDatas.Where(t => String.Equals(t.ModName.ToLower(), Name.ToLower(), StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
 

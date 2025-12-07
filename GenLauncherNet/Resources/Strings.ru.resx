@@ -534,4 +534,13 @@
   <data name="Yes" xml:space="preserve">
     <value>Да</value>
   </data>
+  <data name="ExesWindow" xml:space="preserve">
+    <value>Исполнительные файлы</value>
+  </data>
+  <data name="MoreThanOneGameExe" xml:space="preserve">
+    <value>Выбрано больше одного ехе, заменяющего файл игры</value>
+  </data>
+  <data name="MoreThanOneWBExe" xml:space="preserve">
+    <value>Выбрано больше одного ехе, заменяющего файл WB</value>
+  </data>
 </root>

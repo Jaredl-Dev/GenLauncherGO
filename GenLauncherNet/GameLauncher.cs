@@ -36,16 +36,19 @@ namespace GenLauncherNet
             return true;
         }
 
-        public async static Task<bool> RunGame()
+        public async static Task<bool> RunGame(List<ModificationVersion> versions)
         {
-            var result = await Task.Run(() => StartGameExe());
+            var executables = versions.Where(t => t.ModificationType == ModificationType.Executable && t.ReplacesOriginalWBFile != true).ToList();
+            
+            var result = await Task.Run(() => StartGameExe(executables));
             RenameGameFilesToOriginalState();
             return result;
         }
 
-        public async static Task RunWB()
+        public async static Task RunWB(List<ModificationVersion> versions)
         {
-            await Task.Run(() => StartWBExe());
+            var executable = versions.Where(t => t.ModificationType == ModificationType.Executable && t.ReplacesOriginalWBFile == true).FirstOrDefault();
+            await Task.Run(() => StartWBExe(executable));
             RenameGameFilesToOriginalState();
         }
 
@@ -115,11 +118,13 @@ namespace GenLauncherNet
         public static void RenameGameFilesToOriginalState()
         {
             FilesHandler.ApplyActionsToGameFiles(SymbolicLinkHandler.RemoveSymbLinkFile, RemoveGenLauncherReplaceSuffixes);
+            FoldersHandler.ApplyActionsToGameFolders(SymbolicLinkHandler.RemoveSymbLinkFolder);
         }
 
         private static void PrepareGameFiles(List<ModificationVersion> versions, bool setCameraHeight, bool createLinksOnEmptyBigs = false)
         {
             FilesHandler.ApplyActionsToGameFiles(RenameNonGameBigFile, RenameCustomFiles, SymbolicLinkHandler.RemoveSymbLinkFile);
+            //FoldersHandler.ApplyActionsToGameFolders(SymbolicLinkHandler.RemoveSymbLinkFolder);
 
             if (DataHandler.GetSelectedMod() == null)
             {
@@ -135,7 +140,13 @@ namespace GenLauncherNet
             if (setCameraHeight && EntryPoint.SessionInfo.GameMode == Game.ZeroHour)
                 SetCameraHeight(versions);
 
-            versions.ForEach(v => SymbolicLinkHandler.CreateMirrorsFromFolder(v.GetFolderName(), createLinksOnEmptyBigs));
+            versions.ForEach(v => SymbolicLinkHandler.CreateMirrorsFromFolder(v.GetFolderName(), createLinksOnEmptyBigs, v.ModificationType != ModificationType.Executable));
+
+            var executables = versions.Where(t => t.ModificationType == ModificationType.Executable).ToList();
+            if (executables.Count > 0)
+            {
+                executables.ForEach(v => SymbolicLinkHandler.CreateMirrorsForExe(Directory.GetCurrentDirectory(), v.GetFolderName()));
+            }
         }
 
         private static void RemoveGenLauncherReplaceSuffixes(FileInfo file)
@@ -178,6 +189,11 @@ namespace GenLauncherNet
 
         private static void RemoveFileSuffix(string fileName, string suffix)
         {
+            if (!File.Exists(fileName))
+            {
+                return;
+            }
+
             try
             {
                 if (!File.Exists(fileName.Replace(suffix, string.Empty)))
@@ -256,19 +272,28 @@ namespace GenLauncherNet
 
         #region Exe handlers
 
-        private static bool StartGameExe()
+        private static bool StartGameExe(List<ModificationVersion> versions)
         {
             Process process;
-            if (DataHandler.IsModdedExe() && File.Exists("modded.exe"))
-                process = StartExe("modded.exe");
+            var gameExe = versions.Where(m => m.ReplacesOriginalGameFile == true).FirstOrDefault();
+            if (gameExe == null)
+            {
+                process = StartGameExe("generals.exe");
+            }
             else
-                process = StartExe("generals.exe");
+            {
+                process = StartGameExe(gameExe.ExecutableFileName);
+            }
+
+            var otherExe = versions.Where(m => m.ReplacesOriginalGameFile != true).Where(m => !string.IsNullOrEmpty(m.ExecutableFileName)).ToList();
+
+            foreach (var exe in otherExe)
+            {
+                StartExe(exe.ExecutableFileName);
+            }
+
 
             var exeRunning = true;
-
-            if (DataHandler.UseVulkan)
-                process.PriorityClass = ProcessPriorityClass.High;
-
             process.Exited += (sender, e1) =>
             {
                 exeRunning = false;
@@ -291,15 +316,16 @@ namespace GenLauncherNet
             return result;
         }
 
-        private static void StartWBExe()
+        private static void StartWBExe(ModificationVersion version)
         {
             Process process;
-            
-
-            if (File.Exists(EntryPoint.WorldBuilderExeName))
-                process = StartExe(EntryPoint.WorldBuilderExeName);
-            else
-                process = StartExe("WorldBuilder.exe");
+            if (version != null)
+            {
+                process = StartGameExe(version.ExecutableFileName);
+            } else
+            {
+                process = StartGameExe("WorldBuilder.exe");
+            }
 
             var exeRunning = true;            
 
@@ -314,11 +340,15 @@ namespace GenLauncherNet
             }
         }
 
-        private static Process StartExe(string exeName)
+        private static void StartExe(string exeName)
+        {
+            Process.Start(exeName);
+        }
+
+        private static Process StartGameExe(string exeName)
         {
             Process process;
             
-
             var parameters = "";
 
             if (DataHandler.IsWindowed())

@@ -217,6 +217,7 @@
     <Compile Include="Updaters\S3Updater.cs" />
     <Compile Include="Updaters\UpdaterFactory.cs" />
     <Compile Include="Utility\BigHandler.cs" />
+    <Compile Include="Utility\FoldersHandler.cs" />
     <Compile Include="Utility\GameOptionsHandler.cs" />
     <Compile Include="Utility\BlackWhiteImageGenerator.cs" />
     <Compile Include="DataClasses\ColorsInfo.cs" />

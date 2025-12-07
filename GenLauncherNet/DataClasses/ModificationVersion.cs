@@ -84,6 +84,26 @@ namespace GenLauncherNet
 
             this.Deprecated = otherModificationVersion.Deprecated;
 
+            if (!String.IsNullOrEmpty(otherModificationVersion.ExecutableFileName) && String.IsNullOrEmpty(this.ExecutableFileName))
+                this.ExecutableFileName = otherModificationVersion.ExecutableFileName;
+
+            if (this.ExceptionNames == null || this.ExceptionNames.Count == 0)
+            {
+                this.ExceptionNames = otherModificationVersion.ExceptionNames;
+            }
+
+            if (this.AdditionalFileNames == null || this.AdditionalFileNames.Length == 0)
+            {
+                this.AdditionalFileNames = otherModificationVersion.AdditionalFileNames;
+            }
+
+            if (otherModificationVersion.ReplacesOriginalGameFile || this.ReplacesOriginalGameFile)
+                this.ReplacesOriginalGameFile = true;
+
+            if (otherModificationVersion.ReplacesOriginalWBFile || this.ReplacesOriginalWBFile)
+                this.ReplacesOriginalWBFile = true;
+
+
             if (otherModificationVersion.ColorsInformation != null)
                 this.ColorsInformation = otherModificationVersion.ColorsInformation;
         }
@@ -138,6 +158,12 @@ namespace GenLauncherNet
 
             this.ColorsInformation = modification.ColorsInformation;
             this.SupportLink = modification.SupportLink;
+
+            this.ExceptionNames = modification.ExceptionNames;
+            this.ExecutableFileName = modification.ExecutableFileName;
+            this.ReplacesOriginalGameFile = modification.ReplacesOriginalGameFile;
+            this.ReplacesOriginalWBFile = modification.ReplacesOriginalWBFile;
+            this.AdditionalFileNames = modification.AdditionalFileNames;
         }
 
         public string GetFolderName()
@@ -147,16 +173,21 @@ namespace GenLauncherNet
             switch (this.ModificationType)
             {
                 case ModificationType.Addon:
-                    versionFolder = EntryPoint.GenLauncherModsFolder + '/' + this.DependenceName + '/' + EntryPoint.AddonsFolderName + '/' + this.Name + '/' + this.Version;
+                    versionFolder = EntryPoint.GenLauncherModsFolder + "\\" + this.DependenceName + "\\" + EntryPoint.AddonsFolderName + "\\" + this.Name + "\\" + this.Version;
                     break;
                 case ModificationType.Mod:
                     {
-                        versionFolder = EntryPoint.GenLauncherModsFolder + '/' + this.Name + '/' + this.Version;
+                        versionFolder = EntryPoint.GenLauncherModsFolder + "\\" + this.Name + "\\" + this.Version;
                     }
                     break;
                 case ModificationType.Patch:
                     {
-                        versionFolder = EntryPoint.GenLauncherModsFolder + '/' + this.DependenceName + '/' + EntryPoint.PatchesFolderName + '/' + this.Name + '/' + this.Version;
+                        versionFolder = EntryPoint.GenLauncherModsFolder + "\\" + this.DependenceName + "\\" + EntryPoint.PatchesFolderName + "\\" + this.Name + "\\" + this.Version;
+                    }
+                    break;
+                case ModificationType.Executable:
+                    {
+                        versionFolder = EntryPoint.GenLauncherModsFolder + "\\" + this.DependenceName + "\\" + EntryPoint.ExecutablesFolderName + "\\" + this.Name + "\\" + this.Version;
                     }
                     break;
             }

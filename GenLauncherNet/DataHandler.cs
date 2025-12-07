@@ -22,7 +22,10 @@ namespace GenLauncherNet
         public static string Version { private set; get; }
         public static string DownloadLink { private set; get; }
         private static GitHubMainDataReader gitHubMainDataReader;
-        private static Dictionary<ModificationReposVersion, ModAddonsAndPatches> MofificationsAndAddons;
+        private static Dictionary<ModificationReposVersion, ModAddonsAndPatchesRawData> MofificationsAndAddons;
+        private static Dictionary<ModificationReposVersion, ExecutablesRawData> IndependedExecutables;
+        private static Dictionary<ModificationReposVersion, ExecutablesRawData> DependedExecutables;
+
         private static string startPath = Directory.GetCurrentDirectory();
         private static HashSet<ModificationReposVersion> downloadedModsInfo = new HashSet<ModificationReposVersion>();
         private static HashSet<ModificationVersion> downloadedReposContent = new HashSet<ModificationVersion>();
@@ -52,12 +55,19 @@ namespace GenLauncherNet
                 ReposModsNames = gitHubMainDataReader.GetReposModsNames();
 
                 MofificationsAndAddons = await gitHubMainDataReader.UpdateDownloadedModsDataFromRepos(installedMods);
+                IndependedExecutables = await gitHubMainDataReader.DownloadedIndependedExecutables();
                 var ReposMods = MofificationsAndAddons.Keys.ToList();
+                var IndependedExe = IndependedExecutables.Keys.ToList();
 
                 foreach (var reposMod in ReposMods)
                 {
                     await DownloadImages(reposMod);
                     AddDownloadedModificationData(reposMod);
+                }
+
+                foreach (var reposExe in IndependedExe)
+                {
+                    AddDownloadedModificationData(reposExe);
                 }
 
                 //await ReadOriginalGameAddonsAndPatches();
@@ -76,7 +86,7 @@ namespace GenLauncherNet
         {
             if (connected)
             {
-                var keyModification = new ModificationReposVersion("Original Game");
+                var keyModification = new ModificationReposVersion(EntryPoint.OriginalGameAlias);
 
                 if (downloadedModsInfo.Contains(keyModification))
                     return;
@@ -89,7 +99,7 @@ namespace GenLauncherNet
                 foreach (var patch in reposPatches)
                 {
                     var add = new ModificationVersion(patch);
-                    add.DependenceName = "Original Game";
+                    add.DependenceName = EntryPoint.OriginalGameAlias;
                     Data.AddOrUpdate(add);
                     downloadedReposContent.Add(new ModificationVersion(patch));
                 }
@@ -97,7 +107,7 @@ namespace GenLauncherNet
                 foreach (var addon in reposAddons)
                 {
                     var add = new ModificationVersion(addon);
-                    add.DependenceName = "Original Game";
+                    add.DependenceName = EntryPoint.OriginalGameAlias;
                     Data.AddOrUpdate(add);
                     downloadedReposContent.Add(new ModificationVersion(addon));
                 }
@@ -320,7 +330,7 @@ namespace GenLauncherNet
                     .ToList();
             }
             else
-                return Data.Patches.Where(m => String.Equals(m.DependenceName, "Original game", StringComparison.OrdinalIgnoreCase))
+                return Data.Patches.Where(m => String.Equals(m.DependenceName, EntryPoint.OriginalGameAlias, StringComparison.OrdinalIgnoreCase))
                     .ToList();
         }
 
@@ -333,8 +343,21 @@ namespace GenLauncherNet
                     .Union(Data.Addons.Where(m=> String.Equals(m.DependenceName, GetSelectedPatch()?.Name, StringComparison.OrdinalIgnoreCase)))
                     .ToList();
             else
-                return Data.Addons.Where(m => String.Equals(m.DependenceName, "Original game", StringComparison.OrdinalIgnoreCase))
+                return Data.Addons.Where(m => String.Equals(m.DependenceName, EntryPoint.OriginalGameAlias, StringComparison.OrdinalIgnoreCase))
                     .Union(Data.Addons.Where(m => String.Equals(m.DependenceName, GetSelectedPatch()?.Name, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+        }
+
+        internal static List<GameModification> GetExesForSelectedMod()
+        {
+            var selectedMod = GetSelectedMod();
+
+            if (selectedMod != null)
+                return Data.Exes.Where(m => String.Equals(m.DependenceName, selectedMod.Name, StringComparison.OrdinalIgnoreCase))
+                    .Union(Data.Exes.Where(m => m.DependenceName.Equals(EntryPoint.OriginalGameAlias)))
+                    .ToList();
+            else
+                return Data.Exes.Where(m => m.DependenceName.Equals(EntryPoint.OriginalGameAlias))                    
                     .ToList();
         }
 
@@ -347,8 +370,6 @@ namespace GenLauncherNet
         {
             var result = new List<ModificationVersion>();
             var selectedMod = GetSelectedMod();
-            /*if (selectedMod != null)
-            {*/
                 return GetAddonsForSelectedMod()
                     .Where(m => m.IsSelected)
                     .SelectMany(m => m.ModificationVersions.Where(t => t.IsSelected))
@@ -356,14 +377,27 @@ namespace GenLauncherNet
                       .Where(m => m.IsSelected)
                       .SelectMany(m => m.ModificationVersions.Where(t => t.IsSelected)))
                     .ToList();
-            /*}
+        }
 
-            return result;*/
+        internal static List<ModificationVersion> GetSelectedExesVersions()
+        {
+            var selectedMod = GetSelectedMod();
+            return GetSelectedExesForSelectedMod()
+                .Where(m => m.IsSelected)
+                .SelectMany(m => m.ModificationVersions.Where(t => t.IsSelected))
+                .ToList();
         }
 
         internal static List<GameModification> GetSelectedAddonsForSelectedMod()
         {
             return GetAddonsForSelectedMod().Where(m => m.IsSelected).ToList();
+        }
+
+        internal static List<GameModification> GetSelectedExesForSelectedMod()
+        {
+            var selectedMod = GetSelectedMod();
+
+            return GetExesForSelectedMod().Where(m => m.IsSelected).ToList();
         }
 
         internal static GameModification GetSelectedPatch()
@@ -391,6 +425,14 @@ namespace GenLauncherNet
         {
             return Data.Patches.Where(m => String.Equals(m.DependenceName, modName, StringComparison.OrdinalIgnoreCase))
                .SelectMany(m => m.ModificationVersions)
+               .ToList();
+        }
+
+        public static List<ModificationVersion> GetExeVersionsForModList(string modName)
+        {
+            return Data.Exes.Where(m => String.Equals(m.DependenceName, modName, StringComparison.OrdinalIgnoreCase))
+               .SelectMany(m => m.ModificationVersions)
+               .Union(Data.Exes.Where(m => String.Equals(m.DependenceName, EntryPoint.OriginalGameAlias, StringComparison.OrdinalIgnoreCase) || String.IsNullOrEmpty(m.DependenceName)).SelectMany(m => m.ModificationVersions))
                .ToList();
         }
 
@@ -467,6 +509,9 @@ namespace GenLauncherNet
                 case ModificationType.Patch:
                     Directory.Delete(EntryPoint.GenLauncherModsFolder + '/' + modificationVersion.DependenceName + '/' + EntryPoint.PatchesFolderName + '/' + modificationVersion.Name + '/' + modificationVersion.Version, true);
                     break;
+                case ModificationType.Executable:
+                    Directory.Delete(EntryPoint.GenLauncherModsFolder + '/' + modificationVersion.DependenceName + '/' + EntryPoint.ExecutablesFolderName + '/' + modificationVersion.Name + '/' + modificationVersion.Version, true);
+                    break;
                 case ModificationType.Advertising:
                     Data.Delete(modificationVersion);
                     break;
@@ -489,6 +534,7 @@ namespace GenLauncherNet
                     var modData = MofificationsAndAddons[keyModification];
                     var reposPatches = await gitHubMainDataReader.ReadAddonsForMod(modData.ModPatches);
                     var reposAddons = await gitHubMainDataReader.ReadAddonsForMod(modData.ModAddons);
+                    var reposExes = await gitHubMainDataReader.DownloadedDependedExecutables(modification.Name);
 
                     foreach (var patch in reposPatches)
                     {
@@ -500,6 +546,12 @@ namespace GenLauncherNet
                     {
                         Data.AddOrUpdate(new ModificationVersion(addon));
                         downloadedReposContent.Add(new ModificationVersion(addon));
+                    }
+
+                    foreach (var exe in reposExes)
+                    {
+                        Data.AddOrUpdate(new ModificationVersion(exe.Key));
+                        downloadedReposContent.Add(new ModificationVersion(exe.Key));
                     }
                 }
             }
@@ -538,6 +590,14 @@ namespace GenLauncherNet
                 {
                     foreach (var patchesDirectory in subDirectory.GetDirectories())
                         CheckSubDirectoryForAddonsVersions(patchesDirectory, directory.Name, ModificationType.Patch);
+                    continue;
+                }
+
+                //Adding exes versions for exes
+                if (subDirectory.Name == EntryPoint.ExecutablesFolderName)
+                {
+                    foreach (var exesDirectory in subDirectory.GetDirectories())
+                        CheckSubDirectoryForAddonsVersions(exesDirectory, directory.Name, ModificationType.Executable);
                     continue;
                 }
 
@@ -602,6 +662,13 @@ namespace GenLauncherNet
                 foreach (var patchVersion in patchesVersions)
                 {
                     CheckAddonExistence(patchVersion, EntryPoint.PatchesFolderName);
+                }
+
+                //Checking existing in data patches for mod
+                var exesVersions = GetExeVersionsForModList(modVersion.Name);
+                foreach (var exeVersion in exesVersions)
+                {
+                    CheckAddonExistence(exeVersion, EntryPoint.ExecutablesFolderName);
                 }
             }
         }

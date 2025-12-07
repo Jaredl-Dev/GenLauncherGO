@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GenLauncherNet"
         xmlns:lex="http://wpflocalizeextension.codeplex.com"
-        lex:LocalizeDictionary.DesignCulture="uk"
+        lex:LocalizeDictionary.DesignCulture="en"
         lex:ResxLocalizationProvider.DefaultAssembly="GenLauncher"
         lex:ResxLocalizationProvider.DefaultDictionary="Strings"
         xmlns:Themes="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Aero2" x:Class="GenLauncherNet.Windows.MainWindow"
@@ -826,6 +826,9 @@
         <ListBox Grid.Column="1" Grid.ColumnSpan="4" Grid.Row="3" Grid.RowSpan="2" Margin="12,0,10,40" BorderThickness="0" Background="#00FFFFFF" VirtualizingPanel.ScrollUnit="Pixel" x:Name="AddonsList" ItemTemplate="{StaticResource AddonsTemplate}"  SelectionChanged="AddonsList_SelectionChanged" ScrollViewer.VerticalScrollBarVisibility="Visible" SelectionMode="Multiple" >
         </ListBox>
 
+        <ListBox Grid.Column="1" Grid.ColumnSpan="4" Grid.Row="3" Grid.RowSpan="2" Margin="12,0,10,40" BorderThickness="0" Background="#00FFFFFF" VirtualizingPanel.ScrollUnit="Pixel" x:Name="ExesList" ItemTemplate="{StaticResource AddonsTemplate}"  SelectionChanged="ExesList_SelectionChanged" ScrollViewer.VerticalScrollBarVisibility="Visible" SelectionMode="Multiple" >
+        </ListBox>
+
         <Button Style="{StaticResource DefaultButtonStyle}" Foreground="{DynamicResource GenLauncherDefaultTextColor}" x:Name="ButtonStartGame" FontSize="17" Focusable="False" Content="{lex:Loc Launch}" HorizontalAlignment="Left" Margin="25,14,0,0" VerticalAlignment="Top" Width="229" Height="40" Click="Launch_Click" Grid.Column="6" Grid.Row="2" Grid.RowSpan="2"/>
         <Button Style="{StaticResource DefaultButtonStyle}" Foreground="{DynamicResource GenLauncherDefaultTextColor}" x:Name="ButtonWorldBuilder" FontSize="17" Focusable="False" Content="{lex:Loc WorldBuilder}" HorizontalAlignment="Left" Margin="25,19,0,0" VerticalAlignment="Top" Width="229" Height="40" Click="ButtonWorldBuilder_Click" Grid.Column="6" Grid.Row="3"/>
         <Button Style="{StaticResource DefaultButtonStyle}" Foreground="{DynamicResource GenLauncherDefaultTextColor}" x:Name="ButtonWindowed" FontSize="17" Focusable="False" Content="{lex:Loc ChangeToFullScreen}" HorizontalAlignment="Left" Margin="25,64,0,0" VerticalAlignment="Top" Width="229" Height="40" Click="ButtonWindowed_Click" Grid.Column="6" Grid.Row="3"/>
@@ -866,8 +869,9 @@
         <Button Style="{StaticResource DefaultButtonStyle}" Foreground="{DynamicResource GenLauncherDefaultTextColor}" Grid.Column="4" Grid.Row ="1" x:Name="AddonsButton" FontSize="14" Content="{lex:Loc Addons}" HorizontalAlignment="Left" VerticalAlignment="Top" Width="265" Click="AddonsButton_Click" Height="25"/>
         <TextBlock HorizontalAlignment="Left" TextWrapping="Wrap" Foreground="{DynamicResource GenLauncherDefaultTextColor}" FontSize="25" Text="{lex:Loc InMemoryOfAziz}" VerticalAlignment="Center" Width="605" Height="38" Grid.ColumnSpan="4" Grid.Row="4" Grid.Column="1" Margin="10,108,0,39" Grid.RowSpan="2"/>
 
-        <local:UpdateButton Style="{StaticResource UpdateButtonStyle}" Foreground="{DynamicResource GenLauncherDefaultTextColor}" Grid.Row="2" x:Name="AddModButton" FontWeight="Bold" FontSize="16" Content="{lex:Loc AddMod}" HorizontalAlignment="Left"  VerticalAlignment="Top" Width="160" Click="AddMod_Click" Height="28" Grid.Column="2" Grid.ColumnSpan="2" Margin="25,7,0,0" MouseEnter="UpdateButton_MouseEnter" />
-        <Button Style="{StaticResource DefaultButtonStyle}" Foreground="{DynamicResource GenLauncherDefaultTextColor}" x:Name="ManualAddMod" FontSize="16" Content="{lex:Loc AddModFrFiles}" FontWeight="Bold" Grid.Column="3" HorizontalAlignment="Left" Margin="170,7,0,0" Grid.Row="2" VerticalAlignment="Top" Width="240" Height="28" Click="ManualAddMod_Click" Grid.ColumnSpan="2"/>
+        <local:UpdateButton Style="{StaticResource UpdateButtonStyle}" Foreground="{DynamicResource GenLauncherDefaultTextColor}" Grid.Row="2" x:Name="AddModButton" FontWeight="Bold" FontSize="16" Content="{lex:Loc AddMod}" HorizontalAlignment="Left"  VerticalAlignment="Top" Width="160" Click="AddMod_Click" Height="28" Grid.Column="1" Grid.ColumnSpan="3" Margin="10,7,0,0" MouseEnter="UpdateButton_MouseEnter" />
+        <Button Style="{StaticResource DefaultButtonStyle}" Foreground="{DynamicResource GenLauncherDefaultTextColor}" x:Name="ManualAddMod" FontSize="16" Content="{lex:Loc AddModFrFiles}" FontWeight="Bold" Grid.Column="4" HorizontalAlignment="Left" Margin="21,7,0,0" Grid.Row="2" VerticalAlignment="Top" Width="240" Height="28" Click="ManualAddMod_Click" Grid.ColumnSpan="2"/>
+        <Button Style="{StaticResource DefaultButtonStyle}" Foreground="{DynamicResource GenLauncherDefaultTextColor}" Grid.Row="2" x:Name="ExesButton" FontWeight="Bold" FontSize="14" Content="{lex:Loc ExesWindow}" HorizontalAlignment="Left"  VerticalAlignment="Top" Width="185" Click="Exes_Click" Height="28" Grid.Column="3" Grid.ColumnSpan="3" Margin="38,7,0,0" />
         <Button Style="{StaticResource DefaultButtonStyle}" Foreground="{DynamicResource GenLauncherDefaultTextColor}" x:Name="ManualAddPatch" FontSize="13" Content="{lex:Loc AddPatchFromFiles}" FontWeight="Bold" Grid.Column="3" Grid.ColumnSpan="2" HorizontalAlignment="Left" Margin="1,7,0,0" Grid.Row="2" VerticalAlignment="Top" Width="360" Height="28" Click="ManualAddPatch_Click"/>
         <Button Style="{StaticResource DefaultButtonStyle}" Foreground="{DynamicResource GenLauncherDefaultTextColor}" x:Name="ManualAddAddon" FontSize="13" Content="{lex:Loc AddAddonFromFiles}" FontWeight="Bold" Grid.Column="3" Grid.ColumnSpan="2" HorizontalAlignment="Left" Margin="1,7,0,0" Grid.Row="2" VerticalAlignment="Top" Width="360" Height="28" Click="ManualAddAddon_Click"/>
 

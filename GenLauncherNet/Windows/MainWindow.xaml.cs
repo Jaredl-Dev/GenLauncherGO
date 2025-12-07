@@ -33,6 +33,9 @@ namespace GenLauncherNet.Windows
         private ObservableCollection<ModificationViewModel> AddonsListSource =
             new ObservableCollection<ModificationViewModel>();
 
+        private ObservableCollection<ModificationViewModel> ExesListSource =
+            new ObservableCollection<ModificationViewModel>();
+
         private CancellationTokenSource tokenSource;
         private bool _updating = false;
         private bool _ignoreSelectionFlagMods = false;
@@ -62,6 +65,7 @@ namespace GenLauncherNet.Windows
             ModsList.Visibility = Visibility.Visible;
             ManualAddMod.Visibility = Visibility.Visible;
             AddModButton.Visibility = Visibility.Visible;
+            ExesButton.Visibility = Visibility.Visible;
 
             if (!EntryPoint.SessionInfo.Connected)
                 AddModButton.Visibility = Visibility.Hidden;
@@ -571,6 +575,27 @@ namespace GenLauncherNet.Windows
             AddonsList.ItemsSource = AddonsListSource;
         }
 
+        private void UpdateExesList()
+        {
+            ExesList.ItemsSource = null;
+            ExesListSource = new ObservableCollection<ModificationViewModel>();
+            ExesList.Items.Clear();
+
+            var exes = DataHandler.GetExesForSelectedMod();
+
+            if (exes.Count > 0)
+            {
+                ExesListSource = new ObservableCollection<ModificationViewModel>();
+
+                foreach (var exe in exes)
+                {
+                    ExesListSource.Add(new ModificationViewModel(exe));
+                }
+            }
+
+            ExesList.ItemsSource = ExesListSource;
+        }
+
         public async void AddModToList(string modName)
         {
             DisableUI();
@@ -817,6 +842,61 @@ namespace GenLauncherNet.Windows
             }
         }
 
+        private void ExesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!(e.OriginalSource is ListBox))
+                return;
+
+            var listBox = e.OriginalSource as ListBox;
+
+            if (!string.Equals(listBox.Name, "ExesList"))
+                return;
+
+            if (!_ignoreSelectionFlagMods && Mouse.RightButton == MouseButtonState.Pressed)
+            {
+                if (DataHandler.GetSelectedExesForSelectedMod().Count == 0)
+                {
+                    _ignoreSelectionFlagMods = true;
+                    ExesList.SelectedItems.Clear();
+                    _ignoreSelectionFlagMods = false;
+                }
+                else
+                {
+                    if (e.AddedItems.Count > 0)
+                    {
+                        _ignoreSelectionFlagMods = true;
+                        ExesList.SelectedItems.Remove(e.AddedItems[0]);
+                        _ignoreSelectionFlagMods = false;
+                    }
+                    else
+                    {
+                        _ignoreSelectionFlagMods = true;
+                        ExesList.SelectedItems.Add(e.RemovedItems[0]);
+                        _ignoreSelectionFlagMods = false;
+                    }
+                }
+
+                e.Handled = true;
+                return;
+            }
+
+
+            if (((ListBox)sender).Items.Count != 0)
+            {
+                if (e.AddedItems.Count > 0)
+                {
+                    var addon = ((ModificationViewModel)e.AddedItems[0]).ContainerModification;
+                    ((ModificationViewModel)e.AddedItems[0]).SetSelectedStatus();
+                    addon.IsSelected = true;
+                }
+                else
+                {
+                    ((ModificationViewModel)e.RemovedItems[0]).SetUnSelectedStatus();
+                    ((ModificationViewModel)e.RemovedItems[0]).ContainerModification.IsSelected = false;
+                }
+            }
+        }
+
         private void VersionsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var comboBoxSelectedItem = (ComboBoxData)((ComboBox)sender).SelectedItem;
@@ -865,6 +945,12 @@ namespace GenLauncherNet.Windows
                 data.BruteCancelDownload();
             }
 
+            foreach (var modData in ExesList.Items)
+            {
+                var data = (ModificationViewModel)modData;
+                data.BruteCancelDownload();
+            }
+
             if (ModsList.Items.Count > 0)
             {
                 DataHandler.SaveLauncherData();
@@ -880,6 +966,12 @@ namespace GenLauncherNet.Windows
             }
 
             foreach (var addonData in AddonsList.Items)
+            {
+                var data = (ModificationViewModel)addonData;
+                data.CancelDownload();
+            }
+
+            foreach (var addonData in ExesList.Items)
             {
                 var data = (ModificationViewModel)addonData;
                 data.CancelDownload();
@@ -917,6 +1009,9 @@ namespace GenLauncherNet.Windows
 
                 if (DataHandler.GetSelectedAddonsForSelectedMod().Contains(modData.ContainerModification))
                     AddonsList.SelectedItems.Add(modData);
+
+                if (DataHandler.GetSelectedExesForSelectedMod().Contains(modData.ContainerModification))
+                    ExesList.SelectedItems.Add(modData);
             }
 
             SetFocuses();
@@ -1099,6 +1194,7 @@ namespace GenLauncherNet.Windows
             ModsButton.IsEnabled = false;
             PatchesButton.IsEnabled = false;
             AddonsButton.IsEnabled = false;
+            ExesButton.IsEnabled = false;
 
             ButtonOptions.IsEnabled = false;
             ButtonQuickStart.IsEnabled = false;
@@ -1120,6 +1216,7 @@ namespace GenLauncherNet.Windows
             ModsButton.IsEnabled = true;
             PatchesButton.IsEnabled = true;
             AddonsButton.IsEnabled = true;
+            ExesButton.IsEnabled = true;
 
             ButtonOptions.IsEnabled = true;
 
@@ -1149,6 +1246,8 @@ namespace GenLauncherNet.Windows
             ModsList.Visibility = Visibility.Hidden;
             PatchesList.Visibility = Visibility.Hidden;
             AddonsList.Visibility = Visibility.Hidden;
+            ExesList.Visibility = Visibility.Hidden;
+            ExesButton.Visibility = Visibility.Hidden;
         }
 
         private async Task CheckAndUpdateGentool()
@@ -1356,10 +1455,7 @@ namespace GenLauncherNet.Windows
                 ManualAddAddon.Content = String.Format(LocalizedStrings.Instance["AddAddonFromFiles"], currentMod.Name);
 
                 PatchesButton.Visibility = Visibility.Visible;
-                AddonsButton.Visibility = Visibility.Visible;
-
-                UpdatePatchesList();
-                UpdateAddonsList();
+                AddonsButton.Visibility = Visibility.Visible;                
             }
             else
             {
@@ -1375,10 +1471,11 @@ namespace GenLauncherNet.Windows
 
                 PatchesButton.Visibility = Visibility.Visible;
                 AddonsButton.Visibility = Visibility.Visible;
-
-                UpdatePatchesList();
-                UpdateAddonsList();
             }
+
+            UpdatePatchesList();
+            UpdateAddonsList();
+            UpdateExesList();
         }
 
         private void SetFocuses()
@@ -1414,6 +1511,7 @@ namespace GenLauncherNet.Windows
             versionsList.Add(DataHandler.GetSelectedModVersion());
             versionsList.Add(DataHandler.GetSelectedPatchVersion());
             versionsList.AddRange(DataHandler.GetSelectedAddonsVersions());
+            versionsList.AddRange(DataHandler.GetSelectedExesVersions());
 
             return versionsList.Where(m => m != null).ToList();
         }
@@ -1457,14 +1555,7 @@ namespace GenLauncherNet.Windows
             var selectedModVersion = DataHandler.GetSelectedModVersion();
             var selectedPatchVersion = DataHandler.GetSelectedPatchVersion();
             var selectedAddonsVersions = DataHandler.GetSelectedAddonsVersions().Where(m => m != null);
-
-            /*if (selectedModVersion == null)
-            {
-                modMessage = "Please select installed mod, before run game!";
-                CreateErrorWindow(mainMessage, modMessage);
-
-                return false;
-            }*/
+            var selectedExesVersion = DataHandler.GetSelectedExesForSelectedMod().Where(m => m != null);
 
             if (selectedModVersion != null && !selectedModVersion.Installed)
             {
@@ -1492,6 +1583,16 @@ namespace GenLauncherNet.Windows
                 }
             }
 
+            foreach (var exe in selectedExesVersion)
+            {
+                if (!exe.Installed)
+                {
+                    modMessage = String.Format(LocalizedStrings.Instance["NotInstalled"], exe.Name);
+                    CreateErrorWindow(mainMessage, modMessage);
+                    return false;
+                }
+            }
+
             return true;
         }
 
@@ -1511,18 +1612,17 @@ namespace GenLauncherNet.Windows
 
             List<ModificationViewModel> selectedAddonsData = new List<ModificationViewModel>();
             List<ModificationViewModel> selectedGAddonsData = new List<ModificationViewModel>();
+            List<ModificationViewModel> selectedExesData = new List<ModificationViewModel>();
+
+            foreach (var exe in ExesList.SelectedItems)
+            {
+                selectedExesData.Add((ModificationViewModel)exe);
+            }
 
             foreach (var data in AddonsList.SelectedItems)
             {
                 selectedAddonsData.Add((ModificationViewModel)data);
             }
-
-            /*if (selectedModVersion == null)
-            {
-                modMessage = "Please select installed mod, before run game!";
-                CreateErrorWindow(mainMessage, modMessage);
-                return false;
-            }*/
 
             if (selectedModData != null && selectedModData.Downloader != null)
             {
@@ -1544,7 +1644,7 @@ namespace GenLauncherNet.Windows
             {
                 if (gAddon.Downloader != null)
                 {
-                    modMessage = String.Format(LocalizedStrings.Instance["NotInstalled"],
+                    modMessage = String.Format(LocalizedStrings.Instance["InstallInProgress"],
                         gAddon.ContainerModification.Name);
                     CreateErrorWindow(mainMessage, modMessage);
                     return false;
@@ -1555,11 +1655,50 @@ namespace GenLauncherNet.Windows
             {
                 if (addon.Downloader != null)
                 {
-                    modMessage = String.Format(LocalizedStrings.Instance["NotInstalled"],
+                    modMessage = String.Format(LocalizedStrings.Instance["InstallInProgress"],
                         addon.ContainerModification.Name);
                     CreateErrorWindow(mainMessage, modMessage);
                     return false;
                 }
+            }
+
+            foreach (var exe in selectedExesData)
+            {
+                if (exe.Downloader != null)
+                {
+                    modMessage = String.Format(LocalizedStrings.Instance["InstallInProgress"],
+                        exe.ContainerModification.Name);
+                    CreateErrorWindow(mainMessage, modMessage);
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool GameExesAreCorrect()
+        {
+            var selectedExesVersion = DataHandler.GetSelectedExesForSelectedMod().Where(m => m != null).Where(m => m.ReplacesOriginalGameFile);
+            var mainMessage = LocalizedStrings.Instance["LaunchAborted"];
+
+            if (selectedExesVersion.Count() > 1)
+            {
+                CreateErrorWindow(mainMessage, LocalizedStrings.Instance["MoreThanOneGameExe"]);
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool WBExesAreCorrect()
+        {
+            var selectedExesVersion = DataHandler.GetSelectedExesForSelectedMod().Where(m => m != null).Where(m => m.ReplacesOriginalWBFile);
+            var mainMessage = LocalizedStrings.Instance["LaunchAborted"];
+
+            if (selectedExesVersion.Count() > 1)
+            {
+                CreateErrorWindow(mainMessage, LocalizedStrings.Instance["MoreThanOneWBExe"]);
+                return false;
             }
 
             return true;
@@ -1717,13 +1856,17 @@ namespace GenLauncherNet.Windows
                 return;
             }
 
+            if (!WBExesAreCorrect())
+            {
+                return;
+            }
+
             if (ModificationsDontNeedUpdate() && ModificationsAreNotDeprecated())
             {
                 if (EntryPoint.SessionInfo.Connected)
                 {
                     LauncherUpdate.IsEnabled = false;
                     DisableUI();
-                    await CheckAndDowloadWB();
 
                     SetSelfUpdatingInfo(EntryPoint.SessionInfo.Connected);
                     UpdateProgress.Text = String.Empty;
@@ -1741,7 +1884,7 @@ namespace GenLauncherNet.Windows
                 {
                     if (DataHandler.GetHideLauncher())
                         this.Hide();
-                    await GameLauncher.RunWB();
+                    await GameLauncher.RunWB(activeVersions);
 
                     if (DataHandler.GetHideLauncher())
                         this.Show();
@@ -1780,6 +1923,11 @@ namespace GenLauncherNet.Windows
                 return;
             }
 
+            if (!GameExesAreCorrect())
+            {
+                return;
+            }
+
             if (NeedToApplyDefaultOptions())
             {
                 ApplyDefaultOptions();
@@ -1788,7 +1936,6 @@ namespace GenLauncherNet.Windows
             if (ModificationsDontNeedUpdate() && ModificationsAreNotDeprecated())
             {
                 DisableUI();
-                await CheckModdedExe();
                 var activeVersions = GetSelectedVersionsOfAllSelectedModifications();
                 _isGameRunning = true;
 
@@ -1802,11 +1949,10 @@ namespace GenLauncherNet.Windows
                     if (DataHandler.GetHideLauncher())
                         this.Hide();
 
-                    await CheckAndUpdateGentool();
                     await CheckAndUpdateVulkan();
 
                     DataHandler.FirstRun = false;
-                    var result = await GameLauncher.RunGame();
+                    var result = await GameLauncher.RunGame(activeVersions);
 
                     if (DataHandler.GetHideLauncher())
                         this.Show();
@@ -1847,6 +1993,7 @@ namespace GenLauncherNet.Windows
             ManualAddMod.Visibility = Visibility.Visible;
             ModsList.Visibility = Visibility.Visible;
             AddModButton.Visibility = Visibility.Visible;
+            ExesButton.Visibility = Visibility.Visible;
         }
 
         private async void PatchesButton_Click(object sender, RoutedEventArgs e)
@@ -1873,6 +2020,22 @@ namespace GenLauncherNet.Windows
             }
             AddonsList.Visibility = Visibility.Visible;
             ManualAddAddon.Visibility = Visibility.Visible;
+        }
+
+        private async void Exes_Click(object sender, RoutedEventArgs e)
+        {
+            HideAllLists();
+
+            if (DataHandler.GetSelectedMod() == null)
+            {
+
+                //очистить ехе для мода
+                DisableUI();
+                await DataHandler.ReadOriginalGameAddonsAndPatches();
+                EnableUI();
+            }
+
+            ExesList.Visibility = Visibility.Visible;
         }
 
         private bool DoCheck(List<ModificationVersion> versions)
@@ -1985,6 +2148,28 @@ namespace GenLauncherNet.Windows
                 ButtonQuickStart.Content = LocalizedStrings.Instance["ChangeToQuickStart"];
         }
 
+        private void ExesMod_Click(object sender, RoutedEventArgs e)
+        {
+            var addedModificationsNames = DataHandler.GetMods();
+
+            var reposMods = new List<string>();
+
+            if (DataHandler.ReposModsNames != null)
+                reposMods = DataHandler.ReposModsNames;
+
+            var notAddedModificationsNames = reposMods
+                .Where(t => !addedModificationsNames.Select(m => m.Name.ToLower()).Contains(t.ToLower())).ToList();
+
+            var addNewModWindow = new AddModificationWindow(notAddedModificationsNames)
+            {
+                WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            };
+
+            addNewModWindow.AddModification += AddModToList;
+            addNewModWindow.ShowDialog();
+            SetFocuses();
+        }
+
         private void AddMod_Click(object sender, RoutedEventArgs e)
         {
             var addedModificationsNames = DataHandler.GetMods();
@@ -2041,6 +2226,9 @@ namespace GenLauncherNet.Windows
 
                     if (modData.ContainerModification.ModificationType == ModificationType.Patch)
                         PatchesList.SelectedItems.Add(modData);
+
+                    if (modData.ContainerModification.ModificationType == ModificationType.Executable)
+                        ExesList.SelectedItems.Add(modData);
 
                     modData._GridControls._UpdateButton.IsEnabled = false;
                     DownloadMod(modData);
@@ -2296,7 +2484,7 @@ namespace GenLauncherNet.Windows
 
                 if (activeMod == null)
                 {
-                    name = "Original Game";
+                    name = EntryPoint.OriginalGameAlias;
                 }
                 else
                 {
