@@ -4,6 +4,7 @@ using System.Linq;
 using GenLauncherGO.Core.Integrity.Models;
 using GenLauncherGO.Core.Mods.Models;
 using GenLauncherGO.Core.Startup;
+using GenLauncherGO.Infrastructure.Integrity.Contracts;
 using GenLauncherGO.Infrastructure.Mods.Contracts;
 using Microsoft.Extensions.Logging;
 
@@ -14,15 +15,19 @@ namespace GenLauncherGO.Infrastructure.Mods.Services;
 /// </summary>
 internal sealed class LauncherLocalContentReconciler
 {
+    private readonly IContentIntegrityService _integrityService;
+
     private readonly ILocalLauncherContentService _localContentService;
 
     private readonly ILogger<LauncherLocalContentReconciler> _logger;
 
     public LauncherLocalContentReconciler(
         ILocalLauncherContentService localContentService,
+        IContentIntegrityService integrityService,
         ILogger<LauncherLocalContentReconciler> logger)
     {
         _localContentService = localContentService ?? throw new ArgumentNullException(nameof(localContentService));
+        _integrityService = integrityService ?? throw new ArgumentNullException(nameof(integrityService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -45,13 +50,35 @@ internal sealed class LauncherLocalContentReconciler
             downloadedReposContent,
             installedVersions,
             paths);
+        int deletedSnapshotCount = DeleteOrphanedIntegritySnapshots(launcherData, paths);
         _logger.LogInformation(
             "Reconciled launcher catalog with local content folders. Local versions: {LocalVersionCount}; " +
             "marked not installed: {MarkedNotInstalledCount}; " +
-            "removed stale catalog entries: {RemovedCatalogEntryCount}.",
+            "removed stale catalog entries: {RemovedCatalogEntryCount}; " +
+            "deleted orphaned integrity snapshots: {DeletedSnapshotCount}.",
             installedVersions.Count,
             changes.MarkedNotInstalledCount,
-            changes.RemovedCount);
+            changes.RemovedCount,
+            deletedSnapshotCount);
+    }
+
+    /// <summary>
+    ///     Deletes integrity snapshots whose content is no longer installed.
+    /// </summary>
+    /// <remarks>
+    ///     Deleting content removes its files but never its snapshot, so the snapshot directory is swept here against
+    ///     the reconciled catalog instead. Uninstalled content is safe to drop because integrity targets are only ever
+    ///     built for installed versions, and reinstalling captures a fresh snapshot.
+    /// </remarks>
+    private int DeleteOrphanedIntegritySnapshots(LauncherData launcherData, LauncherPaths paths)
+    {
+        var retainedTargetIds = launcherData.AllContent
+            .SelectMany(content => content.Versions)
+            .Where(version => version.Installation.Installed)
+            .SelectMany(version => ContentIntegrityTargetId.ForContent(version.ContentKey))
+            .ToHashSet(StringComparer.Ordinal);
+
+        return _integrityService.PruneSnapshots(paths, retainedTargetIds);
     }
 
     public void DeleteVersion(
